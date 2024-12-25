@@ -2,7 +2,7 @@
 
 # Variables
 INSTALL_DIR="/opt/custom_agent"
-ZIP_URL="https://example.com/full_custom_agent.zip"  # Replace with your actual ZIP file URL
+ZIP_URL="https://github.com/KPtheitguy/agent/blob/8c538b28b671ba74c63b11316ba814251273a556/projectalphaagent.zip"  
 
 # Function to check command success
 check_success() {
