@@ -2,7 +2,8 @@
 
 # Variables
 INSTALL_DIR="/opt/custom_agent"
-ZIP_URL="https://github.com/KPtheitguy/agent/raw/refs/heads/main/projectalphaagent.zip"  # Update with your actual ZIP URL
+VENV_DIR="$INSTALL_DIR/venv"
+ZIP_URL="https://github.com/KPtheitguy/agent/raw/refs/heads/main/projectalphaagent.zip"
 SERVICE_FILE="/etc/systemd/system/custom_agent.service"
 
 # Function to check command success
@@ -15,7 +16,7 @@ check_success() {
 
 # Step 1: Update the system and install prerequisites
 echo "Updating system and installing prerequisites..."
-sudo apt update && sudo apt install -y python3 python3-pip unzip nginx osquery
+sudo apt update && sudo apt install -y python3 python3-pip python3-venv unzip nginx osquery
 check_success "System update and prerequisites installation"
 
 # Step 2: Create installation directory
@@ -31,9 +32,14 @@ sudo unzip -q /tmp/custom_agent.zip -d "$INSTALL_DIR"
 check_success "Extracting agent package"
 sudo rm /tmp/custom_agent.zip
 
-# Step 4: Install Python dependencies
-echo "Installing Python dependencies..."
-sudo pip3 install -r "$INSTALL_DIR/requirements.txt"
+# Step 4: Create and activate a virtual environment
+echo "Creating virtual environment..."
+python3 -m venv "$VENV_DIR"
+check_success "Virtual environment creation"
+
+echo "Installing Python dependencies in virtual environment..."
+"$VENV_DIR/bin/pip" install --upgrade pip
+"$VENV_DIR/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
 check_success "Python dependencies installation"
 
 # Step 5: Ensure NGINX and osquery are configured
@@ -53,7 +59,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=$INSTALL_DIR
-ExecStart=/usr/bin/python3 $INSTALL_DIR/main.py
+ExecStart=$VENV_DIR/bin/python $INSTALL_DIR/main.py
 Restart=always
 RestartSec=5
 User=root
