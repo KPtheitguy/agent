@@ -3,6 +3,7 @@
 # Variables
 INSTALL_DIR="/opt/custom_agent"
 ZIP_URL="https://github.com/KPtheitguy/agent/raw/refs/heads/main/projectalphaagent.zip"  # Update with your actual ZIP URL
+SERVICE_FILE="/etc/systemd/system/custom_agent.service"
 
 # Function to check command success
 check_success() {
@@ -44,16 +45,15 @@ check_success "osquery setup"
 
 # Step 6: Set up the agent as a systemd service
 echo "Setting up agent as a systemd service..."
-SERVICE_FILE="/etc/systemd/system/custom_agent.service"
-sudo bash -c "cat > $SERVICE_FILE" << 'EOF'
+sudo tee "$SERVICE_FILE" > /dev/null << EOF
 [Unit]
 Description=Custom Agent
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/custom_agent
-ExecStart=/usr/bin/python3 /opt/custom_agent/main.py
+WorkingDirectory=$INSTALL_DIR
+ExecStart=/usr/bin/python3 $INSTALL_DIR/main.py
 Restart=always
 RestartSec=5
 User=root
