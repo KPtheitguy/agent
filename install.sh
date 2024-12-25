@@ -28,7 +28,7 @@ check_success "Directory creation"
 echo "Downloading and extracting agent package..."
 wget -q "$ZIP_URL" -O /tmp/custom_agent.zip
 check_success "Downloading agent package"
-sudo unzip -q /tmp/custom_agent.zip -d "$INSTALL_DIR"
+sudo unzip -o /tmp/custom_agent.zip -d "$INSTALL_DIR"
 check_success "Extracting agent package"
 sudo rm /tmp/custom_agent.zip
 
@@ -38,8 +38,8 @@ python3 -m venv "$VENV_DIR"
 check_success "Virtual environment creation"
 
 echo "Installing Python dependencies in virtual environment..."
-"$VENV_DIR/bin/pip" install --upgrade pip
-"$VENV_DIR/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
+"$VENV_DIR/bin/pip" install --upgrade pip --break-system-packages
+"$VENV_DIR/bin/pip" install -r "$INSTALL_DIR/requirements.txt" --break-system-packages
 check_success "Python dependencies installation"
 
 # Step 5: Ensure NGINX and osquery are configured
