@@ -6,13 +6,11 @@ VENV_DIR="$INSTALL_DIR/venv"
 ZIP_URL="https://github.com/KPtheitguy/agent/raw/refs/heads/main/projectalphaagent.zip"
 SERVICE_FILE="/etc/systemd/system/custom_agent.service"
 
-# Function to check command success
-check_success() {
-  if [ $? -ne 0 ]; then
-    echo "Error: $1 failed. Exiting."
-    exit 1
-  fi
-}
+# Prompt for registration details
+read -p "Enter Agent Name: " AGENT_NAME
+read -p "Enter Registration Token: " REGISTRATION_TOKEN
+read -p "Enter Site Name: " SITE_NAME
+read -p "Enter Location: " LOCATION
 
 # Step 1: Update the system and install prerequisites
 echo "Updating system and installing prerequisites..."
@@ -42,14 +40,7 @@ echo "Installing Python dependencies in virtual environment..."
 "$VENV_DIR/bin/pip" install -r "$INSTALL_DIR/requirements.txt" --break-system-packages
 check_success "Python dependencies installation"
 
-# Step 5: Ensure NGINX and osquery are configured
-echo "Configuring NGINX and osquery..."
-sudo systemctl enable nginx && sudo systemctl start nginx
-check_success "NGINX setup"
-sudo systemctl enable osqueryd && sudo systemctl start osqueryd
-check_success "osquery setup"
-
-# Step 6: Set up the agent as a systemd service
+# Step 5: Set up the agent as a systemd service
 echo "Setting up agent as a systemd service..."
 sudo tee "$SERVICE_FILE" > /dev/null << EOF
 [Unit]
@@ -69,7 +60,7 @@ WantedBy=multi-user.target
 EOF
 check_success "Systemd service creation"
 
-# Step 7: Start the agent service
+# Step 6: Start the agent service
 echo "Starting custom agent service..."
 sudo systemctl daemon-reload
 sudo systemctl enable custom_agent.service
