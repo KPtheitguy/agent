@@ -60,8 +60,12 @@ AgentPortal().register_agent(
     agent_name='$AGENT_NAME'
 )
 ")
+
+echo "Registration Output:"
+echo "$REGISTRATION_OUTPUT"
+
 if [[ "$REGISTRATION_OUTPUT" != *"Agent registered successfully"* ]]; then
-    echo "Error: Agent registration failed. Aborting."
+    echo "Error: Agent registration failed. See details above. Aborting."
     cleanup
 fi
 
