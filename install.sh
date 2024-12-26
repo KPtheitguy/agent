@@ -67,7 +67,7 @@ fi
 
 # Step 6: Set up the agent as a systemd service
 echo "Setting up agent as a systemd service..."
-sudo tee "$SERVICE_FILE" > /dev/null << EOF
+sudo tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
 Description=Custom Agent
 After=network.target
