@@ -52,6 +52,7 @@ echo "Installing Python dependencies in virtual environment..."
 
 # Step 5: Register the agent during installation
 echo "Registering the agent with the portal..."
+export PYTHONPATH="$INSTALL_DIR"
 REGISTRATION_OUTPUT=$("$VENV_DIR/bin/python" -c "
 from agent.core.agent_portal import AgentPortal
 AgentPortal().register_agent(
