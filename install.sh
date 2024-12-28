@@ -67,17 +67,38 @@ if [[ "$REGISTRATION_OUTPUT" != *"Agent registered successfully"* ]]; then
     cleanup
 fi
 
-# Step 6: Set up the agent as a systemd service
+# Extract Agent ID from Registration Output
+AGENT_ID=$(echo "$REGISTRATION_OUTPUT" | grep -oP '(?<=Agent ID: )[a-f0-9-]+')
+if [[ -z "$AGENT_ID" ]]; then
+    echo "Error: Failed to retrieve Agent ID. Aborting."
+    cleanup
+fi
+
+# Step 6: Test WebSocket connectivity
+echo "Testing WebSocket connectivity to the server..."
+WEBSOCKET_TEST_RESULT=$("$VENV_DIR/bin/python" -c "
+from core.websocket_client import WebSocketClient
+import asyncio
+client = WebSocketClient('$AGENT_ID')
+asyncio.run(client.test_connection())
+")
+if [[ "$WEBSOCKET_TEST_RESULT" != "True" ]]; then
+    echo "Error: WebSocket connection test failed. Aborting installation."
+    cleanup
+fi
+echo "WebSocket connectivity verified successfully."
+
+# Step 7: Set up the agent as a systemd service
 echo "Setting up agent as a systemd service..."
-sudo bash -c "cat > $SERVICE_FILE" << 'EOF'
+sudo bash -c "cat > $SERVICE_FILE" << EOF
 [Unit]
 Description=Custom Agent
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/custom_agent
-ExecStart=/opt/custom_agent/venv/bin/python /opt/custom_agent/main.py
+WorkingDirectory=$INSTALL_DIR
+ExecStart=$VENV_DIR/bin/python $INSTALL_DIR/main.py
 Restart=always
 RestartSec=5
 User=root
@@ -91,7 +112,7 @@ if [ $? -ne 0 ]; then
     cleanup
 fi
 
-# Step 7: Start and verify the agent service
+# Step 8: Start and verify the agent service
 echo "Starting custom agent service..."
 sudo systemctl daemon-reload || cleanup
 sudo systemctl enable custom_agent.service || cleanup
