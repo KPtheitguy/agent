@@ -69,22 +69,27 @@ fi
 
 # Step 6: Set up the agent as a systemd service
 echo "Setting up agent as a systemd service..."
-sudo tee "$SERVICE_FILE" > /dev/null <<EOF
+sudo bash -c "cat > $SERVICE_FILE" << 'EOF'
 [Unit]
 Description=Custom Agent
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=$INSTALL_DIR
-ExecStart=$VENV_DIR/bin/python $INSTALL_DIR/main.py
+WorkingDirectory=/opt/custom_agent
+ExecStart=/opt/custom_agent/venv/bin/python /opt/custom_agent/main.py
 Restart=always
 RestartSec=5
 User=root
 
 [Install]
 WantedBy=multi-user.target
-EOF || cleanup
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to create service file. Aborting."
+    cleanup
+fi
 
 # Step 7: Start and verify the agent service
 echo "Starting custom agent service..."
