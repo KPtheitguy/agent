@@ -5,8 +5,6 @@ INSTALL_DIR="/opt/custom_agent"
 VENV_DIR="$INSTALL_DIR/venv"
 ZIP_URL="https://github.com/KPtheitguy/agent/raw/refs/heads/main/projectalphaagent.zip"
 SERVICE_FILE="/etc/systemd/system/custom_agent.service"
-OSQUERY_DEB="osquery_5.8.1-1.linux_amd64.deb"
-OSQUERY_DEB_URL="https://pkg.osquerypackages.com/linux/$OSQUERY_DEB"
 LOG_FILE="/var/log/custom_agent_install.log"
 
 # Function to clean up in case of failure
@@ -16,8 +14,6 @@ cleanup() {
     sudo systemctl disable custom_agent.service 2>/dev/null || true
     sudo rm -rf "$INSTALL_DIR"
     sudo rm -f "$SERVICE_FILE"
-    sudo rm -f /etc/apt/sources.list.d/osquery.list
-    sudo rm -f /etc/apt/keyrings/osquery-archive-keyring.gpg
     sudo systemctl daemon-reload
     echo "Cleanup complete. Exiting." | tee -a "$LOG_FILE"
     exit 1
@@ -29,26 +25,21 @@ read -p "Enter Registration Token: " REGISTRATION_TOKEN
 
 # Step 1: Update the system and install prerequisites
 echo "Updating system and installing prerequisites..." | tee -a "$LOG_FILE"
-sudo apt update && sudo apt install -y python3 python3-pip python3-venv unzip nginx curl || cleanup
+sudo apt update && sudo apt install -y python3 python3-pip python3-venv unzip curl || cleanup
 
-# Step 2: Add osquery repository and install
-echo "Adding osquery repository and installing..." | tee -a "$LOG_FILE"
-sudo mkdir -p /etc/apt/keyrings
-if curl -fsSL https://pkg.osquerypackages.com/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/osquery-archive-keyring.gpg; then
-    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/osquery-archive-keyring.gpg] https://pkg.osquerypackages.com/deb deb main" | sudo tee /etc/apt/sources.list.d/osquery.list > /dev/null
-    sudo apt update || cleanup
-    sudo apt install -y osquery || cleanup
+# Step 2: Install osquery standalone package
+echo "Installing osquery from standalone package..." | tee -a "$LOG_FILE"
+OSQUERY_DEB="osquery_5.8.1-1.linux_amd64.deb"
+OSQUERY_DEB_URL="https://pkg.osquerypackages.com/linux/$OSQUERY_DEB"
+
+wget -q "$OSQUERY_DEB_URL" -O /tmp/$OSQUERY_DEB || cleanup
+if sudo dpkg -i /tmp/$OSQUERY_DEB; then
+    sudo apt-get -f install -y || cleanup
+    sudo rm /tmp/$OSQUERY_DEB
+    echo "Standalone osquery installation completed." | tee -a "$LOG_FILE"
 else
-    echo "Failed to add osquery repository. Attempting standalone package installation..." | tee -a "$LOG_FILE"
-    wget -q "$OSQUERY_DEB_URL" -O /tmp/$OSQUERY_DEB || cleanup
-    if sudo dpkg -i /tmp/$OSQUERY_DEB; then
-        sudo apt-get -f install -y || cleanup
-        sudo rm /tmp/$OSQUERY_DEB
-        echo "Standalone osquery installation completed." | tee -a "$LOG_FILE"
-    else
-        echo "Standalone osquery installation failed. Aborting." | tee -a "$LOG_FILE"
-        cleanup
-    fi
+    echo "Standalone osquery installation failed. Aborting." | tee -a "$LOG_FILE"
+    cleanup
 fi
 
 # Step 3: Create installation directory
