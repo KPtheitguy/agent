@@ -6,7 +6,7 @@ VENV_DIR="$INSTALL_DIR/venv"
 ZIP_URL="https://github.com/KPtheitguy/agent/raw/refs/heads/main/projectalphaagent.zip"
 SERVICE_FILE="/etc/systemd/system/custom_agent.service"
 OSQUERY_DEB="osquery_5.8.1-1.linux_amd64.deb"
-OSQUERY_DEB_URL="https://pkg.osquery.io/linux/$OSQUERY_DEB"
+OSQUERY_DEB_URL="https://pkg.osquerypackages.com/linux/$OSQUERY_DEB"
 LOG_FILE="/var/log/custom_agent_install.log"
 
 # Function to clean up in case of failure
@@ -34,17 +34,21 @@ sudo apt update && sudo apt install -y python3 python3-pip python3-venv unzip ng
 # Step 2: Add osquery repository and install
 echo "Adding osquery repository and installing..." | tee -a "$LOG_FILE"
 sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://pkg.osquery.io/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/osquery-archive-keyring.gpg
-if [ $? -eq 0 ]; then
-    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/osquery-archive-keyring.gpg] https://pkg.osquery.io/deb deb main" | sudo tee /etc/apt/sources.list.d/osquery.list > /dev/null || cleanup
+if curl -fsSL https://pkg.osquerypackages.com/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/osquery-archive-keyring.gpg; then
+    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/osquery-archive-keyring.gpg] https://pkg.osquerypackages.com/deb deb main" | sudo tee /etc/apt/sources.list.d/osquery.list > /dev/null
     sudo apt update || cleanup
     sudo apt install -y osquery || cleanup
 else
     echo "Failed to add osquery repository. Attempting standalone package installation..." | tee -a "$LOG_FILE"
     wget -q "$OSQUERY_DEB_URL" -O /tmp/$OSQUERY_DEB || cleanup
-    sudo dpkg -i /tmp/$OSQUERY_DEB || cleanup
-    sudo apt-get -f install -y || cleanup
-    sudo rm /tmp/$OSQUERY_DEB
+    if sudo dpkg -i /tmp/$OSQUERY_DEB; then
+        sudo apt-get -f install -y || cleanup
+        sudo rm /tmp/$OSQUERY_DEB
+        echo "Standalone osquery installation completed." | tee -a "$LOG_FILE"
+    else
+        echo "Standalone osquery installation failed. Aborting." | tee -a "$LOG_FILE"
+        cleanup
+    fi
 fi
 
 # Step 3: Create installation directory
