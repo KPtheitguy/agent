@@ -117,7 +117,7 @@ User=root
 
 [Install]
 WantedBy=multi-user.target
-EOF || cleanup
+EOF
 
 # Step 9: Start the agent service
 echo "Starting custom agent service..."
