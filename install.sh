@@ -5,7 +5,8 @@ INSTALL_DIR="/opt/custom_agent"
 VENV_DIR="$INSTALL_DIR/venv"
 ZIP_URL="https://github.com/KPtheitguy/agent/raw/refs/heads/main/projectalphaagent.zip"
 SERVICE_FILE="/etc/systemd/system/custom_agent.service"
-LOG_FILE="/var/log/custom_agent_install.log"
+OSQUERY_DEB_URL="https://pkg.osquery.io/deb/osquery_5.14.1-1.linux_amd64.deb"
+OSQUERY_DEB_PATH="/tmp/osquery.deb"
 
 # Function to clean up in case of failure
 cleanup() {
@@ -13,7 +14,7 @@ cleanup() {
     sudo systemctl stop custom_agent.service 2>/dev/null || true
     sudo systemctl disable custom_agent.service 2>/dev/null || true
     sudo rm -rf "$INSTALL_DIR"
-    sudo rm -f "$SERVICE_FILE"
+    sudo rm -f "$SERVICE_FILE" "$OSQUERY_DEB_PATH"
     sudo systemctl daemon-reload
     echo "Cleanup complete. Exiting."
     exit 1
@@ -28,18 +29,18 @@ echo "Updating system and installing prerequisites..."
 sudo apt update && sudo apt install -y python3 python3-pip python3-venv unzip curl || cleanup
 
 # Step 2: Install osquery
-echo "Adding osquery repository and installing..."
-if curl -fsSL https://pkg.osquery.io/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/osquery-keyring.gpg; then
-    echo "deb [signed-by=/usr/share/keyrings/osquery-keyring.gpg] https://pkg.osquery.io/deb deb main" | sudo tee /etc/apt/sources.list.d/osquery.list
-    sudo apt-get update && sudo apt-get install -y osquery || cleanup
+echo "Installing osquery from standalone package..."
+wget -q "$OSQUERY_DEB_URL" -O "$OSQUERY_DEB_PATH" || cleanup
+sudo dpkg -i "$OSQUERY_DEB_PATH" || cleanup
+sudo apt-get -f install -y || cleanup
+sudo rm -f "$OSQUERY_DEB_PATH"
+
+# Verify osquery installation
+if ! command -v osqueryi &> /dev/null; then
+    echo "Error: osquery installation failed. Aborting."
+    cleanup
 else
-    echo "Failed to add osquery repository. Attempting standalone package installation..."
-    OSQUERY_DEB="osquery-5.11.2.linux.x86_64.deb"
-    OSQUERY_DEB_URL="https://github.com/osquery/osquery/releases/download/5.11.2/$OSQUERY_DEB"
-    wget -q "$OSQUERY_DEB_URL" -O /tmp/$OSQUERY_DEB || cleanup
-    sudo dpkg -i /tmp/$OSQUERY_DEB || cleanup
-    sudo apt-get -f install -y || cleanup
-    sudo rm /tmp/$OSQUERY_DEB
+    echo "osquery installed successfully."
 fi
 
 # Step 3: Create installation directory
@@ -79,7 +80,7 @@ AgentPortal().register_agent(
 echo "Registration Output:"
 echo "$REGISTRATION_OUTPUT"
 if [[ "$REGISTRATION_OUTPUT" != *"Agent registered successfully"* ]]; then
-    echo "Error: Agent registration failed. See details above. Aborting."
+    echo "Error: Agent registration failed. Aborting."
     cleanup
 fi
 
